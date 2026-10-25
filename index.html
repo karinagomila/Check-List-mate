@@ -349,11 +349,12 @@
   document.getElementById('next').addEventListener('click', () => irA(sumarDias(dia, 1)));
 
   let deslizar = null;
+  let tras = false;
   // Cambiar de día con el dedo: deslizar hacia la izquierda (día siguiente) o hacia la derecha (día anterior).
   // Deslizar arriba y abajo sigue sirviendo para scrollear la lista.
   sheet.addEventListener('pointerdown', (e) => {
     if (editando) return;
-    if (e.target.closest('input, button, .foto, .cuerpo')) return;
+    if (e.target.closest('input, button, .foto')) return;
     deslizar = { x: e.clientX, y: e.clientY };
   });
   document.addEventListener('pointerup', (e) => {
@@ -362,9 +363,14 @@
     deslizar = null;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       const sentido = dx < 0 ? 1 : -1;
+      tras = true;                                          // que el gesto no abra el pop-up
+      setTimeout(() => { tras = false; }, 400);
       setTimeout(() => irA(sumarDias(dia, sentido)), 0);   // después de cerrar el gesto
     }
   });
+  document.addEventListener('click', (e) => {
+    if (tras) { tras = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
   document.addEventListener('pointercancel', () => { deslizar = null; });
 
   // Al volver a abrir la app (o pasar la medianoche) muestra el día de hoy
