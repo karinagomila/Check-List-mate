@@ -20,8 +20,8 @@
   #sheet, #sheet * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   #sheet input, #sheet .edit-input { -webkit-user-select: text; user-select: text; }
   html, body { margin: 0; height: 100%; background: var(--paper); }
-  body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; overflow: hidden; }
-  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+  body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+  #sheet { position: relative; min-height: 100vh; min-height: 100dvh; background: var(--paper); overflow-x: hidden; touch-action: pan-y; }
 
   /* ---------- Entrada: el logo aparece de a poco; tocando la pantalla se entra ---------- */
   #intro { position: fixed; inset: 0; z-index: 20; background: #F5EFEA; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -30,7 +30,7 @@
   @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Cabecera ---------- */
-  header { pointer-events: auto; touch-action: pan-y; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 28px 12px 8px; }
+  header { pointer-events: auto; touch-action: none; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 28px 12px 8px; }
   .fecha { text-align: center; flex: 1; }
   .fecha .dia { font-size: 23px; font-weight: 700; color: var(--claro); }
   .fecha .mes { font-size: 15px; color: var(--claro); letter-spacing: .5px; }
@@ -57,6 +57,13 @@
   .foto .quitar { display: none; position: absolute; top: -10px; right: -10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--ink); color: #FFFFFF; font: inherit; font-size: 17px; line-height: 26px; padding: 0; cursor: pointer; }
   .foto .handle { display: none; position: absolute; right: -9px; bottom: -9px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 2px solid #FFFFFF; cursor: nwse-resize; touch-action: none; }
   .foto.sel .quitar, .foto.sel .handle { display: block; }
+
+  /* ---------- Espiral: los anillos bajan hasta el centro de cada agujero ---------- */
+  #rings, #holes { position: absolute; left: 0; right: 0; display: grid; grid-template-columns: repeat(14, 1fr); justify-items: center; padding: 0 14px; pointer-events: none; }
+  #rings { top: -14px; height: 58px; z-index: 2; }
+  #holes { top: 38px; height: 12px; z-index: 1; }
+  .ring { width: 16px; height: 58px; border: 4px solid var(--ring); border-radius: 10px; background: transparent; }
+  .hole { width: 12px; height: 12px; border-radius: 50%; background: var(--hole); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
 
   /* ---------- Pendientes con renglón ---------- */
   #lista { position: relative; z-index: 2; list-style: none; margin: 0; padding: 8px 34px 0; }
@@ -92,6 +99,8 @@
 </div>
 
 <div id="sheet">
+  <div id="rings"></div>
+  <div id="holes"></div>
   <div id="fotos"></div>
 
   <header>
@@ -350,19 +359,20 @@
 
   let deslizar = null;
   let tras = false;
-  // Cambiar de día con el dedo: deslizar hacia la izquierda (día siguiente) o hacia la derecha (día anterior).
-  // Deslizar arriba y abajo sigue sirviendo para scrollear la lista.
-  sheet.addEventListener('pointerdown', (e) => {
+  // Cambiar de día con el dedo, en la cabecera: deslizar hacia arriba (día siguiente) o hacia abajo (día anterior).
+  // La lista se scrollea normal con el dedo.
+  const cabecera = document.querySelector('header');
+  cabecera.addEventListener('pointerdown', (e) => {
     if (editando) return;
-    if (e.target.closest('input, button, .foto')) return;
+    if (e.target.closest('input, button, label, .foto')) return;
     deslizar = { x: e.clientX, y: e.clientY };
   });
   document.addEventListener('pointerup', (e) => {
     if (!deslizar) return;
     const dx = e.clientX - deslizar.x, dy = e.clientY - deslizar.y;
     deslizar = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      const sentido = dx < 0 ? 1 : -1;
+    if (Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+      const sentido = dy < 0 ? 1 : -1;
       tras = true;                                          // que el gesto no abra el pop-up
       setTimeout(() => { tras = false; }, 400);
       setTimeout(() => irA(sumarDias(dia, sentido)), 0);   // después de cerrar el gesto
@@ -491,6 +501,14 @@
     arrastreFoto = null;
     guardar();
   });
+
+  // ---------- Espiral y agujeros ----------
+  const anillos = document.getElementById('rings');
+  const agujeros = document.getElementById('holes');
+  for (let i = 0; i < 14; i++) {
+    const r = document.createElement('div'); r.className = 'ring'; anillos.appendChild(r);
+    const h = document.createElement('div'); h.className = 'hole'; agujeros.appendChild(h);
+  }
 
   render();
 })();
