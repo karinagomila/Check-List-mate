@@ -21,8 +21,7 @@
   #sheet input, #sheet .edit-input { -webkit-user-select: text; user-select: text; }
   html, body { margin: 0; height: 100%; background: var(--paper); overflow: hidden; }
   body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
-  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow: hidden; display: flex; flex-direction: column; }
-  #cuerpo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 
   /* ---------- Entrada: el logo aparece de a poco; tocando la pantalla se entra ---------- */
   #intro { position: fixed; inset: 0; z-index: 20; background: #F5EFEA; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -31,7 +30,7 @@
   @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Cabecera ---------- */
-  header { flex: none; pointer-events: auto; touch-action: none; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 28px 12px 8px; }
+  header { pointer-events: auto; touch-action: pan-y; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 28px 12px 8px; }
   .fecha { text-align: center; flex: 1; }
   .fecha .dia { font-size: 23px; font-weight: 700; color: var(--claro); }
   .fecha .mes { font-size: 15px; color: var(--claro); letter-spacing: .5px; }
@@ -220,7 +219,6 @@
   const sheet = document.getElementById('sheet');
   const entrada = document.getElementById('entrada');
   const fotosCont = document.getElementById('fotos');
-  const cuerpo = document.getElementById('cuerpo');
 
   function render() {
     const k = clave(dia);
@@ -353,36 +351,14 @@
 
   // ---------- Cambiar de día: flechas o deslizar ----------
   function irA(nuevoDia) {
-    dia = nuevoDia; sel = null; editando = null; fotoSel = null; render(); cuerpo.scrollTop = 0;
+    dia = nuevoDia; sel = null; editando = null; fotoSel = null; render(); sheet.scrollTop = 0;
   }
   document.getElementById('prev').addEventListener('click', () => irA(sumarDias(dia, -1)));
   document.getElementById('next').addEventListener('click', () => irA(sumarDias(dia, 1)));
 
-  let deslizar = null;
   let tras = false;
   // Cambiar de día con el dedo, en la cabecera: deslizar hacia arriba (día siguiente) o hacia abajo (día anterior).
   // La lista se scrollea normal con el dedo.
-  const cabecera = document.querySelector('header');
-  cabecera.addEventListener('pointerdown', (e) => {
-    if (editando) return;
-    if (e.target.closest('input, button, label, .foto')) return;
-    deslizar = { x: e.clientX, y: e.clientY };
-  });
-  document.addEventListener('pointerup', (e) => {
-    if (!deslizar) return;
-    const dx = e.clientX - deslizar.x, dy = e.clientY - deslizar.y;
-    deslizar = null;
-    if (Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5) {
-      const sentido = dy < 0 ? 1 : -1;
-      tras = true;                                          // que el gesto no abra el pop-up
-      setTimeout(() => { tras = false; }, 400);
-      setTimeout(() => irA(sumarDias(dia, sentido)), 0);   // después de cerrar el gesto
-    }
-  });
-  document.addEventListener('click', (e) => {
-    if (tras) { tras = false; e.stopPropagation(); e.preventDefault(); }
-  }, true);
-  document.addEventListener('pointercancel', () => { deslizar = null; });
 
   // Al volver a abrir la app (o pasar la medianoche) muestra el día de hoy
   document.addEventListener('visibilitychange', () => {
