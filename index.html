@@ -15,34 +15,28 @@
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--paper); }
   body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; overflow: hidden; }
-  #sheet { position: relative; min-height: 100vh; min-height: 100dvh; background: var(--paper); overflow: hidden; }
+  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   /* ---------- Entrada: el logo aparece de a poco; tocando la pantalla se entra ---------- */
   #intro { position: fixed; inset: 0; z-index: 20; background: #F5EFEA; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  #intro img { width: min(62vw, 300px); height: auto; opacity: 0; animation: aparece 1.1s ease forwards; }
+  #intro img { width: min(93vw, 450px); height: auto; opacity: 0; animation: aparece 1.1s ease forwards; }
   #intro .entrar { position: absolute; bottom: 14vh; left: 0; right: 0; text-align: center; color: var(--claro); font-size: 16px; font-weight: 700; letter-spacing: .5px; opacity: 0; animation: aparece 1s ease 1s forwards; }
   @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
 
-  /* ---------- Espiral ---------- */
-  #rings, #holes { position: absolute; left: 0; right: 0; display: grid; grid-template-columns: repeat(14, 1fr); justify-items: center; padding: 0 14px; pointer-events: none; }
-  #rings { top: -14px; height: 58px; z-index: 2; }
-  #holes { top: 38px; height: 12px; z-index: 1; }
-  .ring { width: 16px; height: 58px; border: 4px solid var(--ring); border-radius: 10px; background: transparent; }
-  .hole { width: 12px; height: 12px; border-radius: 50%; background: var(--hole); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
-
   /* ---------- Cabecera ---------- */
-  header { pointer-events: none; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 74px 12px 8px; }
+  header { pointer-events: auto; touch-action: none; position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 74px 12px 8px; }
   .fecha { text-align: center; flex: 1; }
   .fecha .dia { font-size: 20px; font-weight: 700; color: var(--claro); }
   .fecha .mes { font-size: 13px; color: var(--claro); letter-spacing: .5px; }
-  .col { display: flex; flex-direction: column; gap: 4px; align-items: center; width: 38px; }
+  .col { display: flex; flex-direction: column; gap: 4px; align-items: center; width: 42px; }
   .ico, .nav { pointer-events: auto; }
-  .ico { width: 38px; height: 38px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .ico:active { background: rgba(0,0,0,.06); }
+  .ico { width: 42px; height: 42px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .ico:active { color: var(--claro); }
+  .ico.abierto { color: var(--claro); }
   #fotoBtn, #palBtn { position: relative; overflow: hidden; background: #E9E0D2; border-radius: 10px; color: var(--oscuro); }
   #fotoIn { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
   .ico#prev, .ico#next { color: var(--oscuro); }
-  .ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- Paleta ---------- */
   .paleta { position: fixed; top: 130px; right: 12px; z-index: 30; background: #FFFFFF; border: 1.5px solid #DCD4C6; border-radius: 14px; padding: 12px 14px; box-shadow: 0 4px 14px rgba(0,0,0,.12); display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #5E5A52; }
@@ -92,8 +86,6 @@
 </div>
 
 <div id="sheet">
-  <div id="rings"></div>
-  <div id="holes"></div>
   <div id="fotos"></div>
 
   <header>
@@ -190,7 +182,16 @@
     botonesPaleta.push(b);
     paleta.appendChild(b);
   });
-  document.getElementById('palBtn').addEventListener('click', () => { paleta.hidden = !paleta.hidden; });
+  const palBtn = document.getElementById('palBtn');
+  function cerrarPaleta() { paleta.hidden = true; palBtn.classList.remove('abierto'); }
+  palBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    paleta.hidden = !paleta.hidden;
+    palBtn.classList.toggle('abierto', !paleta.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (!paleta.hidden && !e.target.closest('#paleta, #palBtn')) cerrarPaleta();
+  });
   aplicarColores();
 
   // ---------- Estado de pantalla ----------
@@ -342,8 +343,11 @@
   document.getElementById('next').addEventListener('click', () => irA(sumarDias(dia, 1)));
 
   let deslizar = null;
+  // Cambiar de día con el dedo: deslizando arriba o abajo sobre la cabecera (la fecha).
+  // El resto de la hoja se desplaza normal, para que la lista se pueda scrollear.
   sheet.addEventListener('pointerdown', (e) => {
     if (editando) return;
+    if (!e.target.closest('header')) return;
     if (e.target.closest('input, button, .foto, .cuerpo')) return;
     deslizar = { x: e.clientX, y: e.clientY };
   });
@@ -476,15 +480,6 @@
     arrastreFoto = null;
     guardar();
   });
-
-  // ---------- Espiral y agujeros ----------
-  const anillos = document.getElementById('rings');
-  const agujeros = document.getElementById('holes');
-  for (let i = 0; i < 14; i++) {
-    const r = document.createElement('div'); r.className = 'ring'; anillos.appendChild(r);
-    const h = document.createElement('div'); h.className = 'hole'; agujeros.appendChild(h);
-  }
-
 
   render();
 })();
