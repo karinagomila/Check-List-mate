@@ -21,7 +21,9 @@
   #sheet input, #sheet .edit-input { -webkit-user-select: text; user-select: text; }
   html, body { margin: 0; height: 100%; background: var(--paper); overflow: hidden; }
   body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
-  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow-x: hidden; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+  #sheet { position: relative; height: 100vh; height: 100dvh; background: var(--paper); overflow: hidden; }
+  #pagina { position: relative; height: 100%; display: flex; flex-direction: column; }
+  #cuerpo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 
   /* ---------- Entrada: el logo aparece de a poco; tocando la pantalla se entra ---------- */
   #intro { position: fixed; inset: 0; z-index: 20; background: #F5EFEA; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -100,6 +102,7 @@
   <div id="holes"></div>
   <div id="fotos"></div>
 
+  <div id="pagina">
   <header>
     <div class="col flechas">
       <button class="ico" id="prev" aria-label="Día anterior"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
@@ -123,6 +126,7 @@
       <input id="entrada" type="text" maxlength="200" placeholder="Escribí un pendiente y dale Enter">
     </div>
   </form>
+  </div>
   </div>
 
 </div>
@@ -219,6 +223,8 @@
   const sheet = document.getElementById('sheet');
   const entrada = document.getElementById('entrada');
   const fotosCont = document.getElementById('fotos');
+  const cuerpo = document.getElementById('cuerpo');
+  const pagina = document.getElementById('pagina');
 
   function render() {
     const k = clave(dia);
@@ -351,7 +357,7 @@
 
   // ---------- Cambiar de día: flechas o deslizar ----------
   function irA(nuevoDia) {
-    dia = nuevoDia; sel = null; editando = null; fotoSel = null; render(); sheet.scrollTop = 0;
+    dia = nuevoDia; sel = null; editando = null; fotoSel = null; render(); cuerpo.scrollTop = 0; pagina.style.transform = '';
   }
   document.getElementById('prev').addEventListener('click', () => irA(sumarDias(dia, -1)));
   document.getElementById('next').addEventListener('click', () => irA(sumarDias(dia, 1)));
@@ -366,6 +372,49 @@
   });
 
   // La rueda del mouse solo scrollea la lista. Los días cambian con el dedo (barra de arriba) o las flechas.
+
+  // ---------- Deslizar: la lista se scrollea con el dedo; si ya está arriba o abajo de todo y se sigue empujando, cambia de día ----------
+  let g = null;
+  function puedeCambiarDia(dy) {
+    if (cuerpo.scrollHeight <= cuerpo.clientHeight + 2) return true;
+    if (dy > 0 && cuerpo.scrollTop <= 0) return true;
+    if (dy < 0 && cuerpo.scrollTop + cuerpo.clientHeight >= cuerpo.scrollHeight - 2) return true;
+    return false;
+  }
+  sheet.addEventListener('touchstart', (e) => {
+    if (editando || e.target.closest('input, button, label, .foto, .pop, .edit-input')) { g = null; return; }
+    g = { y0: e.touches[0].clientY, mov: false, dy: 0 };
+  }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => {
+    if (!g) return;
+    const dy = e.touches[0].clientY - g.y0;
+    if (!g.mov) {
+      if (Math.abs(dy) < 8) return;
+      if (!puedeCambiarDia(dy)) { g = null; return; }
+      g.mov = true;
+    }
+    e.preventDefault();
+    g.dy = dy;
+    pagina.style.transition = 'none';
+    pagina.style.transform = 'translateY(' + dy + 'px)';
+  }, { passive: false });
+  sheet.addEventListener('touchend', () => {
+    if (!g || !g.mov) { g = null; return; }
+    const dy = g.dy;
+    g = null;
+    if (Math.abs(dy) > 80) {
+      const sentido = dy < 0 ? 1 : -1;
+      setTimeout(() => irA(sumarDias(dia, sentido)), 0);
+    } else {
+      pagina.style.transition = 'transform .2s ease';
+      pagina.style.transform = 'translateY(0)';
+    }
+  }, { passive: true });
+  sheet.addEventListener('touchcancel', () => {
+    g = null;
+    pagina.style.transition = 'transform .2s ease';
+    pagina.style.transform = 'translateY(0)';
+  }, { passive: true });
 
   // ---------- Fotos: agregar (hasta 3 por día), mover, agrandar y quitar ----------
   function fotosDelDia() { return st.fotos[clave(dia)] || []; }
